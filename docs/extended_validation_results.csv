@@ -1,0 +1,15 @@
+check,status
+Numeric feature types,PASS
+Valid prediction dates,PASS
+Valid renewal dates,PASS
+All household IDs exist,PASS
+All beneficiary IDs exist,PASS
+All episode IDs exist,PASS
+All outcomes link to model episodes,PASS
+Model and audit episode sets match,PASS
+Beneficiary household assignments match,PASS
+Administrative complexity is reproducible,PASS
+Churn rate can be computed,PASS
+Churn counts reconcile,PASS
+Audit and modeling outcomes agree,PASS
+Subgroup churn rates can be computed,PASS

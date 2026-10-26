@@ -1,0 +1,25 @@
+check,status
+Modeling row count,PASS
+Modeling column count,PASS
+Audit row count,PASS
+Audit column count,PASS
+Unique modeling episode IDs,PASS
+Unique audit episode IDs,PASS
+Unique beneficiary IDs,PASS
+No missing modeling values,PASS
+No missing audit values,PASS
+Binary churn target,PASS
+Both target classes present,PASS
+Churn target matches audit,PASS
+Prediction occurs 30 days before renewal,PASS
+Valid household sizes,PASS
+Nonnegative prior coverage gaps,PASS
+Nonnegative previous renewals,PASS
+Valid outreach attempt counts,PASS
+Valid administrative complexity,PASS
+Valid binary administrative flags,PASS
+Valid notice flags,PASS
+Returned notice requires sent notice,PASS
+Response requires outreach attempt,PASS
+Fairness attributes excluded from modeling table,PASS
+Fairness attributes present in audit table,PASS

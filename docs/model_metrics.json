@@ -1,0 +1,22 @@
+{
+  "Coverage churn": {
+    "test_rows": 7432,
+    "train_rows": 22568,
+    "test_prevalence": 0.13495694294940797,
+    "ROC_AUC": 0.6508796056999324,
+    "average_precision": 0.22371169756485615,
+    "Brier": 0.11234056011915078,
+    "baseline_Brier": 0.11674965981213097,
+    "log_loss": 0.3782511839239035
+  },
+  "Early outreach nonresponse": {
+    "test_rows": 7432,
+    "train_rows": 22568,
+    "test_prevalence": 0.5904198062432723,
+    "ROC_AUC": 0.6229324061441011,
+    "average_precision": 0.6934722257666036,
+    "Brier": 0.22696890349696866,
+    "baseline_Brier": 0.2419369696664198,
+    "log_loss": 0.6435745945990774
+  }
+}
