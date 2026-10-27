@@ -379,17 +379,3 @@ Do not upload virtual environments, credentials, API keys, private documents, or
 - Subgroup comparisons describe historical synthetic outcomes.
 - Real-world use requires authorized data, timestamp verification, external and temporal evaluation, calibration assessment, subgroup model evaluation, and human review.
 
-## Final Submission Checks
-
-Before submitting, confirm that:
-
-- The SharePoint link opens the demonstration recording.
-- The recording meets the requested seven-minute duration and demonstrates both models.
-- Audio is clear and application content is visible.
-- Both members have verified their contribution statements.
-- The instructor and all project members have permission to view the recording.
-- The repository and its documentation are accessible.
-
-Submit this repository link through the course portal:
-
-https://github.com/poornima1508/MedChurn-Insights
