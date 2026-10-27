@@ -14,9 +14,11 @@ Explore historical renewal outcomes, subgroup comparisons, and predictive what-i
 
 [Watch the MedChurn demonstration](https://sluedu-my.sharepoint.com/personal/poornima_anamanenisayeeswaran_slu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fpoornima%5Fanamanenisayeeswaran%5Fslu%5Fedu%2FDocuments%2FRecordings%2FCall%20with%20Md%20Arshad%20Khan%2D20261026%5F223317%2DMeeting%20Recording%2Emp4)
 
-The demonstration covers the KPIs, predictive models, predictor importance, individual contributions, what-if analysis, automatically generated summaries, and interpretation limits.
+The recording is hosted on university SharePoint through Microsoft Stream. Viewing may require signing in with an authorized university account.
 
-If GitHub does not display a video player, download the file to watch it.
+The demonstration covers KPI definitions, predictive models, overall predictor importance, individual contributions, what-if analysis, automatic summaries, and limitations.
+
+The recording is hosted separately and is not stored in this repository. The instructor and all project members must have viewing permission.
 
 ## Application Pages
 
@@ -327,7 +329,8 @@ No broken requirements found.
 | `docs/model_metrics.json` | Saved model evaluation results. |
 | `docs/importance_churn_30d.csv` | Churn-model permutation importance. |
 | `docs/importance_nonresponse.csv` | Nonresponse-model permutation importance. |
-| `demo.mp4` | Application demonstration recording. |
+
+The demonstration recording is hosted on SharePoint and linked near the top of this README.
 
 Run data-generation scripts only from the project directory. Regenerating data may overwrite included CSV files.
 
@@ -344,6 +347,7 @@ Completed work includes:
 - Model and application verification scripts.
 - Setup instructions and supporting documentation.
 - Deployment of the live Streamlit application.
+- A demonstration recording linked through SharePoint.
 
 See [the progress report](docs/PROGRESS_REPORT.md) for details.
 
@@ -379,11 +383,12 @@ Do not upload virtual environments, credentials, API keys, private documents, or
 
 Before submitting, confirm that:
 
-- The demonstration link opens the uploaded `demo.mp4`.
+- The SharePoint link opens the demonstration recording.
 - The recording meets the requested seven-minute duration and demonstrates both models.
 - Audio is clear and application content is visible.
 - Both members have verified their contribution statements.
-- The instructor and all members can access the repository and recording.
+- The instructor and all project members have permission to view the recording.
+- The repository and its documentation are accessible.
 
 Submit this repository link through the course portal:
 
