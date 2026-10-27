@@ -8,9 +8,15 @@ MedChurn supports coverage-continuity review and early outreach planning using 3
 
 [Launch MedChurn Insights](https://medchurn-insights.streamlit.app/)
 
-Explore renewal outcomes, descriptive subgroup comparisons, and predictive what-if scenarios directly in your browser.
+Explore historical renewal outcomes, subgroup comparisons, and predictive what-if scenarios directly in your browser.
 
-Source code and project materials: [MedChurn Insights on GitHub](https://github.com/poornima1508/MedChurn-Insights).
+## Demonstration Video
+
+[Watch the MedChurn demonstration](demo.mp4)
+
+The demonstration covers the KPIs, predictive models, predictor importance, individual contributions, what-if analysis, automatically generated summaries, and interpretation limits.
+
+If GitHub does not display a video player, download the file to watch it.
 
 ## Application Pages
 
@@ -18,7 +24,7 @@ Source code and project materials: [MedChurn Insights on GitHub](https://github.
 |---|---|
 | Renewal Overview | Descriptive renewal outcomes and coverage-churn statistics. |
 | Subgroup Analysis | Historical synthetic outcome comparisons and filtered case review. |
-| Predictive Scenarios | Model performance, overall predictor importance, individual contributions, what-if comparisons, and automatic summaries. |
+| Predictive Scenarios | Model evaluation, overall importance, individual contributions, what-if comparisons, and automatic summaries. |
 
 Subgroup comparisons describe historical synthetic outcomes. They do not evaluate predictive-model fairness.
 
@@ -33,7 +39,7 @@ The application supports:
 - Understanding model predictions and their limitations.
 - Comparing hypothetical scenarios with a clearly identified baseline.
 
-Financial relevance is indirect through staff-capacity planning. The project does not estimate savings, revenue, or profitability because the data contain no observed intervention effects or financial inputs.
+Financial relevance is indirect through staff-capacity planning. The project does not estimate savings, revenue, or profitability because the data contain no financial inputs or observed intervention effects.
 
 ## Key Performance Indicators
 
@@ -42,9 +48,7 @@ Financial relevance is indirect through staff-capacity planning. The project doe
 | Coverage churn rate | Proportion of renewal episodes with a simulated coverage interruption within 30 days after renewal. | Supports continuity assistance and case-review workload planning. | Predicted 30 days before renewal. |
 | Early outreach nonresponse rate | Proportion without a response by 30 days before renewal, including episodes with no outreach attempts. | Supports early contact planning and estimation of unresolved outreach workload. | Predicted 45 days before renewal, assuming household contact attributes are known then. |
 
-Both KPI denominators include all relevant renewal episodes.
-
-Each model estimates an individual episode’s outcome probability. Averaging probabilities over an appropriate cohort provides an estimate of its expected outcome rate.
+Each model estimates an individual episode’s outcome probability. Averaging these probabilities over an appropriate cohort estimates its expected outcome rate.
 
 Nonresponse is not a failure rate restricted to contacted beneficiaries. It includes episodes with no outreach attempts under the simulated historical outreach mix.
 
@@ -58,7 +62,7 @@ The model uses information assumed available 30 days before renewal.
 |---|---|
 | Prior coverage gaps | Historical interruptions may signal vulnerability to future coverage disruption. |
 | Renewal notice sent | Indicates whether initial renewal communication was sent. |
-| Renewal notice returned | Indicates a possible delivery barrier. |
+| Renewal notice returned | Indicates a possible notice-delivery barrier. |
 | Responded before prediction | Reflects recorded engagement before the prediction snapshot. |
 | Prior documentation issues | Represents previous administrative barriers. |
 | Administrative complexity | Summarizes administrative burden in the supplied simulation. |
@@ -69,7 +73,7 @@ Administrative complexity overlaps with some underlying indicators, which can co
 
 ### Early Outreach Nonresponse Model
 
-The model forecasts at 45 days before renewal whether an episode will have no response by 30 days before renewal.
+This model forecasts at 45 days before renewal whether an episode will have no response by 30 days before renewal.
 
 | Predictor | Predictive Rationale |
 |---|---|
@@ -78,7 +82,7 @@ The model forecasts at 45 days before renewal whether an episode will have no re
 
 The source does not contain timestamped household changes. The model assumes these attributes are known at the earlier prediction date.
 
-Address stability is a candidate predictor rather than an assumed source of signal. It showed little additional predictive usefulness in the fitted synthetic-data model.
+Address stability showed little additional predictive usefulness in the fitted synthetic-data model.
 
 Observed response, completed outreach attempts, returned notices, churn outcomes, identifiers, and protected attributes are excluded as predictors from this model.
 
@@ -91,11 +95,11 @@ Both outcomes use separately fitted L2-regularized binary logistic regression mo
 Logistic regression was selected because it:
 
 - Is appropriate for binary outcomes.
-- Produces probability estimates.
+- Produces individual probability estimates.
 - Supports exact additive explanations in log odds.
 - Matches the additive log-odds structure of the supplied churn simulation.
 
-Numeric predictors are standardized and categorical predictors are one-hot encoded within each pipeline.
+Numeric predictors are standardized, and categorical predictors are one-hot encoded within each pipeline.
 
 Preprocessing is fitted only on training data. No class reweighting or holdout-based hyperparameter tuning is used.
 
@@ -110,7 +114,7 @@ Training and testing use a fixed, approximately 75/25 household-grouped split.
 | Random seed | 42 |
 | Split unit | Household |
 
-Members of the same household cannot appear in both partitions. The realized episode counts differ slightly from an exact 75/25 split because whole households are assigned together.
+Members of the same household cannot appear in both partitions. Episode counts differ slightly from an exact 75/25 split because whole households are assigned together.
 
 ### Model Results
 
@@ -121,7 +125,7 @@ Members of the same household cannot appear in both partitions. The realized epi
 
 Both models improve on their constant training-prevalence benchmarks for Brier score. Average precision exceeds test prevalence for both models.
 
-Discrimination remains modest. Lower Brier score and log loss indicate better probability predictions; Brier score alone does not establish calibration.
+Discrimination remains modest. Lower Brier score and log loss indicate better probability predictions. Brier score alone does not establish calibration.
 
 These results describe an internal synthetic-data holdout. They do not establish performance on real Medicaid populations or future renewal periods.
 
@@ -135,7 +139,7 @@ Importance is measured as the increase in log loss after shuffling a predictor a
 - Near-zero or negative values provide little evidence of usefulness.
 - Correlated predictors may share or mask importance.
 
-Overall importance describes predictive usefulness across held-out cases. It does not explain one individual prediction or establish causation.
+Overall importance describes predictive usefulness across cases. It does not explain one individual prediction or establish causation.
 
 ## Individual Prediction Contributions
 
@@ -163,9 +167,9 @@ The application displays:
 
 Positive contributions increase model log odds relative to the training reference. Negative contributions decrease them.
 
-The training reference differs from the selected episode baseline used for what-if comparisons. It may not represent an actual household.
+The training reference differs from the selected baseline episode and may not represent an actual household.
 
-Log-odds contributions are not percentage-point changes, causal effects, or explanations of the difference between the selected baseline and updated scenario.
+Log-odds contributions are not percentage-point changes, causal effects, or direct explanations of the difference between the baseline and updated scenario.
 
 ## What-if Analysis
 
@@ -252,8 +256,6 @@ Dependencies are recorded in `requirements.txt`. Dependency checks passed in the
 
 ### Model Checks
 
-Run:
-
 ```bash
 python evaluate.py
 ```
@@ -273,8 +275,6 @@ It verifies:
 These checks passed in the tested macOS environment.
 
 ### Application Checks
-
-Run:
 
 ```bash
 python test_app.py
@@ -296,8 +296,6 @@ The downloaded scenario summary was separately opened and checked. The contribut
 A missing `ScriptRunContext` warning may appear during automated testing and does not indicate a failed check.
 
 ### Dependency Checks
-
-Run:
 
 ```bash
 python -m pip check
@@ -323,12 +321,13 @@ No broken requirements found.
 | `requirements.txt` | Recorded dependency versions. |
 | `evaluate.py` | Model evaluation and consistency checks. |
 | `test_app.py` | Automated application checks. |
-| `docs/PROGRESS_REPORT.md` | KPI justification, predictor rationale, model results, accomplishments, and limitations. |
-| `docs/CONTRIBUTIONS.md` | Actual member contributions and AI-assistance disclosure. |
+| `docs/PROGRESS_REPORT.md` | KPI justification, predictor rationale, results, accomplishments, and limitations. |
+| `docs/CONTRIBUTIONS.md` | Member contributions and AI-assistance disclosure. |
 | `docs/DATA_SHARING.md` | Data provenance and sharing information. |
 | `docs/model_metrics.json` | Saved model evaluation results. |
 | `docs/importance_churn_30d.csv` | Churn-model permutation importance. |
 | `docs/importance_nonresponse.csv` | Nonresponse-model permutation importance. |
+| `demo.mp4` | Application demonstration recording. |
 
 Run data-generation scripts only from the project directory. Regenerating data may overwrite included CSV files.
 
@@ -344,28 +343,11 @@ Completed work includes:
 - Automatically generated, downloadable summaries.
 - Model and application verification scripts.
 - Setup instructions and supporting documentation.
+- Deployment of the live Streamlit application.
 
 See [the progress report](docs/PROGRESS_REPORT.md) for details.
 
-See [member contributions](docs/CONTRIBUTIONS.md) for each contributor’s actual completed work and the AI-assistance disclosure. Both contributors should verify that statement before submission.
-
-## Demonstration Video
-
-The required seven-minute demonstration recording is pending and will be added or linked here before submission.
-
-The recording will demonstrate:
-
-- KPI definitions and decision relevance.
-- Predictors and algorithm rationale.
-- Both predictive models.
-- Overall importance and individual contributions.
-- Baseline and modified scenarios.
-- Automatically generated summaries.
-- Interpretation and limitations.
-
-The live application supplements the recording; it does not replace it.
-
-Replay the recording to confirm clear audio, readable visuals, and unobstructed application content. If hosted separately, verify that the instructor and all contributors can view it.
+See [member contributions](docs/CONTRIBUTIONS.md) for each contributor’s completed work and the AI-assistance disclosure.
 
 ## Data Provenance and Sharing
 
@@ -375,7 +357,7 @@ No actual Medicaid administrative records or real beneficiary identifiers were u
 
 Included generation scripts and raw/final CSV files support reproduction of the educational project.
 
-See [data provenance and sharing](docs/DATA_SHARING.md) for details. Contributors should confirm authorization to share project materials.
+See [data provenance and sharing](docs/DATA_SHARING.md) for details.
 
 Do not upload virtual environments, credentials, API keys, private documents, or real beneficiary data.
 
@@ -393,16 +375,16 @@ Do not upload virtual environments, credentials, API keys, private documents, or
 - Subgroup comparisons describe historical synthetic outcomes.
 - Real-world use requires authorized data, timestamp verification, external and temporal evaluation, calibration assessment, subgroup model evaluation, and human review.
 
-## Submission Checklist
+## Final Submission Checks
 
-- [x] Application code included.
-- [x] Synthetic data and generation scripts included.
-- [x] Setup instructions and dependencies documented.
-- [x] Progress report included.
-- [x] Model metrics and importance outputs included.
-- [ ] Each contributor’s actual work confirmed and documented.
-- [ ] Live application tested in a signed-out browser for all pages and both models.
-- [ ] Seven-minute demonstration video added or linked.
-- [ ] Recording replayed to verify audio and visibility.
-- [ ] Instructor and all contributors can access the repository and recording.
-- [ ] Repository link submitted through the course portal.
+Before submitting, confirm that:
+
+- The demonstration link opens the uploaded `demo.mp4`.
+- The recording meets the requested seven-minute duration and demonstrates both models.
+- Audio is clear and application content is visible.
+- Both members have verified their contribution statements.
+- The instructor and all members can access the repository and recording.
+
+Submit this repository link through the course portal:
+
+https://github.com/poornima1508/MedChurn-Insights
