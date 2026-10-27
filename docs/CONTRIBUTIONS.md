@@ -7,8 +7,10 @@
 
 ## Demonstration
 
-Demonstration preparation and presentation responsibilities will be
-updated after the recording is completed.
+Poornima presented the application purpose, KPIs, modeling approach,
+and coverage churn scenario. Md Arshad Khan presented individual
+prediction contributions, the early nonresponse scenario, and
+project limitations.
 
 ## AI Assistance
 
