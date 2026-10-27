@@ -2,7 +2,209 @@
 
 A Streamlit educational application for a Renewal Operations Supervisor at a fictional state Medicaid agency.
 
-The application supports coverage-continuity review and early outreach planning using synthetic data.
+MedChurn supports coverage-continuity review and early outreach planning using 30,000 synthetic renewal episodes.
+
+## Live Application
+
+[Launch MedChurn Insights](https://medchurn-insights.streamlit.app/)
+
+Explore renewal outcomes, descriptive subgroup comparisons, and predictive what-if scenarios directly in your browser.
+
+Source code and project materials: [MedChurn Insights on GitHub](https://github.com/poornima1508/MedChurn-Insights).
+
+## Application Pages
+
+| Page | Purpose |
+|---|---|
+| Renewal Overview | Descriptive renewal outcomes and coverage-churn statistics. |
+| Subgroup Analysis | Historical synthetic outcome comparisons and filtered case review. |
+| Predictive Scenarios | Model performance, overall predictor importance, individual contributions, what-if comparisons, and automatic summaries. |
+
+Subgroup comparisons describe historical synthetic outcomes. They do not evaluate predictive-model fairness.
+
+## Decision-Maker and Objectives
+
+The intended user is a Renewal Operations Supervisor.
+
+The application supports:
+
+- Prioritizing cases for supportive coverage-continuity review.
+- Planning early outreach and estimating unresolved workload.
+- Understanding model predictions and their limitations.
+- Comparing hypothetical scenarios with a clearly identified baseline.
+
+Financial relevance is indirect through staff-capacity planning. The project does not estimate savings, revenue, or profitability because the data contain no observed intervention effects or financial inputs.
+
+## Key Performance Indicators
+
+| KPI | Definition | Decision Relevance | Prediction Timeline |
+|---|---|---|---|
+| Coverage churn rate | Proportion of renewal episodes with a simulated coverage interruption within 30 days after renewal. | Supports continuity assistance and case-review workload planning. | Predicted 30 days before renewal. |
+| Early outreach nonresponse rate | Proportion without a response by 30 days before renewal, including episodes with no outreach attempts. | Supports early contact planning and estimation of unresolved outreach workload. | Predicted 45 days before renewal, assuming household contact attributes are known then. |
+
+Both KPI denominators include all relevant renewal episodes.
+
+Each model estimates an individual episode’s outcome probability. Averaging probabilities over an appropriate cohort provides an estimate of its expected outcome rate.
+
+Nonresponse is not a failure rate restricted to contacted beneficiaries. It includes episodes with no outreach attempts under the simulated historical outreach mix.
+
+## Predictors and Modeling Rationale
+
+### Coverage Churn Model
+
+The model uses information assumed available 30 days before renewal.
+
+| Predictor | Predictive Rationale |
+|---|---|
+| Prior coverage gaps | Historical interruptions may signal vulnerability to future coverage disruption. |
+| Renewal notice sent | Indicates whether initial renewal communication was sent. |
+| Renewal notice returned | Indicates a possible delivery barrier. |
+| Responded before prediction | Reflects recorded engagement before the prediction snapshot. |
+| Prior documentation issues | Represents previous administrative barriers. |
+| Administrative complexity | Summarizes administrative burden in the supplied simulation. |
+
+These predictors reflect the supplied synthetic churn-generation process. Its relationships are hypothetical assumptions rather than findings from real Medicaid records.
+
+Administrative complexity overlaps with some underlying indicators, which can complicate importance attribution.
+
+### Early Outreach Nonresponse Model
+
+The model forecasts at 45 days before renewal whether an episode will have no response by 30 days before renewal.
+
+| Predictor | Predictive Rationale |
+|---|---|
+| Contact stability | Represents consistency of contact information and potential reachability. |
+| Address stability | Represents a possible delivery factor whose predictive usefulness must be evaluated. |
+
+The source does not contain timestamped household changes. The model assumes these attributes are known at the earlier prediction date.
+
+Address stability is a candidate predictor rather than an assumed source of signal. It showed little additional predictive usefulness in the fitted synthetic-data model.
+
+Observed response, completed outreach attempts, returned notices, churn outcomes, identifiers, and protected attributes are excluded as predictors from this model.
+
+The model forecasts under the simulated historical outreach mix. It does not estimate the effect of choosing a particular outreach intervention.
+
+### Algorithm Selection
+
+Both outcomes use separately fitted L2-regularized binary logistic regression models with `C = 1`.
+
+Logistic regression was selected because it:
+
+- Is appropriate for binary outcomes.
+- Produces probability estimates.
+- Supports exact additive explanations in log odds.
+- Matches the additive log-odds structure of the supplied churn simulation.
+
+Numeric predictors are standardized and categorical predictors are one-hot encoded within each pipeline.
+
+Preprocessing is fitted only on training data. No class reweighting or holdout-based hyperparameter tuning is used.
+
+## Training and Evaluation
+
+Training and testing use a fixed, approximately 75/25 household-grouped split.
+
+| Setting | Value |
+|---|---|
+| Training episodes | 22,568 |
+| Testing episodes | 7,432 |
+| Random seed | 42 |
+| Split unit | Household |
+
+Members of the same household cannot appear in both partitions. The realized episode counts differ slightly from an exact 75/25 split because whole households are assigned together.
+
+### Model Results
+
+| Model | Test Prevalence | ROC-AUC | Average Precision | Brier Score | Constant-Risk Baseline Brier | Log Loss |
+|---|---:|---:|---:|---:|---:|---:|
+| Coverage churn | 0.1350 | 0.6509 | 0.2237 | 0.1123 | 0.1167 | 0.3783 |
+| Early outreach nonresponse | 0.5904 | 0.6229 | 0.6935 | 0.2270 | 0.2419 | 0.6436 |
+
+Both models improve on their constant training-prevalence benchmarks for Brier score. Average precision exceeds test prevalence for both models.
+
+Discrimination remains modest. Lower Brier score and log loss indicate better probability predictions; Brier score alone does not establish calibration.
+
+These results describe an internal synthetic-data holdout. They do not establish performance on real Medicaid populations or future renewal periods.
+
+## Overall Predictor Importance
+
+The application displays held-out permutation importance for each model.
+
+Importance is measured as the increase in log loss after shuffling a predictor across held-out cases, averaged over five repetitions. The standard deviation across repetitions is also displayed.
+
+- Larger positive values indicate greater predictive usefulness.
+- Near-zero or negative values provide little evidence of usefulness.
+- Correlated predictors may share or mask importance.
+
+Overall importance describes predictive usefulness across held-out cases. It does not explain one individual prediction or establish causation.
+
+## Individual Prediction Contributions
+
+The application uses exact centered coefficient contributions, an appropriate alternative to SHAP for additive logistic models.
+
+For each transformed predictor:
+
+`Contribution = coefficient × (scenario value − mean training value)`
+
+The reference is:
+
+`Reference log odds = intercept + sum(coefficient × mean training value)`
+
+The reference plus all contributions reconstructs the scenario’s model log odds. The logistic transformation converts this total to probability.
+
+One-hot encoded components are grouped under their original predictor.
+
+The application displays:
+
+- Contribution direction and magnitude.
+- Contributions in log odds.
+- Odds multipliers relative to each predictor’s training-reference component.
+- A chart distinguishing positive and negative contributions.
+- Explanatory text for the selected scenario.
+
+Positive contributions increase model log odds relative to the training reference. Negative contributions decrease them.
+
+The training reference differs from the selected episode baseline used for what-if comparisons. It may not represent an actual household.
+
+Log-odds contributions are not percentage-point changes, causal effects, or explanations of the difference between the selected baseline and updated scenario.
+
+## What-if Analysis
+
+For either model, users can:
+
+1. Select a prediction model.
+2. Select a held-out baseline renewal episode.
+3. Inspect the baseline inputs and predicted risk.
+4. Modify predictor values.
+5. Run the what-if analysis.
+6. Compare baseline and updated predictions.
+7. Review individual contributions and an automatic summary.
+8. Download the scenario summary.
+
+The selected baseline remains fixed while scenario inputs change.
+
+Unchanged inputs and unchanged predictions are valid results. A modified input does not have to produce a different prediction.
+
+The application rejects a returned notice without a sent notice. Invalid submissions clear previous results to prevent stale predictions from being displayed.
+
+Input values are bounded to observed values, but combinations may still be uncommon.
+
+All results are model-based scenarios, not guaranteed effects of real-world interventions.
+
+## Automatically Generated Summaries
+
+Every valid scenario submission generates a deterministic summary containing:
+
+- All submitted scenario inputs.
+- Changed inputs, or an explicit statement that none changed.
+- Baseline predicted risk.
+- Updated predicted risk.
+- Change from baseline in percentage points.
+- Practical implications for supportive review or outreach planning.
+- Relevant assumptions and limitations.
+
+Differences are calculated using unrounded predictions.
+
+Summaries require no external language model or API key and can be downloaded as text files.
 
 ## Setup and Launch
 
@@ -26,125 +228,31 @@ On Windows PowerShell:
 .venv\Scripts\Activate.ps1
 ```
 
-Install dependencies and launch:
+Install dependencies:
 
 ```bash
 python -m pip install -r requirements.txt
+```
+
+Launch the application:
+
+```bash
 python -m streamlit run main.py
 ```
 
 Open the local URL printed by Streamlit.
 
-The first visit to Predictive Scenarios trains both models. Later visits reuse models cached in memory. No API keys, downloaded models, or external services are required.
+The first visit to Predictive Scenarios trains both models. Later visits reuse models cached in memory.
 
-Dependencies are recorded in requirements.txt. Dependency checks passed in the tested macOS environment. Installation on other operating systems has not been verified.
+No credentials, downloaded model files, or external data services are required to run the application locally.
 
-## Application Pages
-
-- **Renewal Overview:** Descriptive renewal outcomes and coverage-churn statistics.
-- **Subgroup Analysis:** Historical synthetic outcome comparisons and filtered case review.
-- **Predictive Scenarios:** Model performance, overall predictor importance, individual contributions, what-if comparisons, and automatic summaries.
-
-Subgroup comparisons describe historical outcomes; they do not evaluate predictive-model fairness.
-
-## Key Performance Indicators
-
-| KPI | Definition | Prediction Timeline |
-|---|---|---|
-| Coverage churn rate | Proportion of renewal episodes with a simulated coverage interruption within 30 days after renewal. | Predicted 30 days before renewal. |
-| Early outreach nonresponse rate | Proportion without a response by 30 days before renewal, including episodes with no outreach attempts. | Predicted 45 days before renewal, assuming household contact attributes are known then. |
-
-Individual probabilities can be averaged over an appropriate cohort to estimate its expected outcome rate.
-
-Coverage churn risk supports prioritizing continuity assistance. Nonresponse risk supports early outreach and workload planning. Neither model estimates financial savings.
-
-## Predictive Models
-
-Both models use logistic regression with preprocessing fitted only on training data.
-
-### Coverage Churn Predictors
-
-- Prior coverage gaps.
-- Renewal notice sent.
-- Renewal notice returned.
-- Response before the prediction date.
-- Prior documentation issues.
-- Administrative complexity.
-
-### Early Outreach Nonresponse Predictors
-
-- Contact stability.
-- Address stability.
-
-The nonresponse model excludes completed outreach attempts and observed response status as predictors. It forecasts under the simulated historical outreach mix.
-
-Logistic regression is suitable for binary outcomes, produces probability estimates, and supports exact additive explanations in log odds.
-
-See [the progress report](docs/PROGRESS_REPORT.md) for individual predictor justifications and modeling assumptions.
-
-## Training and Evaluation
-
-Training and testing are separated by household using a fixed, approximately 75/25 split:
-
-- Training: 22,568 episodes.
-- Testing: 7,432 episodes.
-- Random seed: 42.
-
-Members of the same household cannot appear in both sets. Preprocessing is fitted only on training data, and the holdout is not used for tuning.
-
-| Model | ROC-AUC | Average Precision | Brier Score | Constant-Risk Baseline Brier |
-|---|---:|---:|---:|---:|
-| Coverage churn | 0.6509 | 0.2237 | 0.1123 | 0.1167 |
-| Early outreach nonresponse | 0.6229 | 0.6935 | 0.2270 | 0.2419 |
-
-Lower Brier scores indicate better probability predictions. Both models improve on their constant-risk benchmarks, but discrimination remains modest.
-
-These results describe an internal synthetic-data holdout, not real-world or temporal validation.
-
-## Predictor Importance and Individual Contributions
-
-**Overall importance** measures predictive usefulness across held-out cases using permutation importance: the increase in log loss after shuffling a predictor.
-
-**Individual contributions** explain one scenario using exact additive logistic contributions relative to mean training features.
-
-Positive contributions increase model log odds relative to the training reference; negative contributions decrease them.
-
-The training reference differs from the selected baseline episode used for what-if comparisons. Log-odds contributions are not percentage-point changes or evidence of causation.
-
-Charts display readable predictor names and hover values. Individual contribution charts distinguish positive and negative contributions by color.
-
-## What-if Analysis
-
-Users can:
-
-1. Select a prediction model.
-2. Select a baseline renewal episode.
-3. Inspect the baseline prediction and inputs.
-4. Modify predictor values.
-5. Run the scenario.
-6. Compare baseline and updated predictions.
-7. Review individual contributions and an automatic summary.
-
-Unchanged inputs and unchanged predictions are valid results.
-
-A returned notice without a sent notice is rejected. Invalid submissions clear previous scenario results so that stale predictions are not displayed.
-
-Every valid scenario run generates a summary containing:
-
-- Scenario inputs.
-- Changed inputs.
-- Baseline and updated predictions.
-- Difference from the baseline.
-- Practical implications.
-- Relevant limitations.
-
-Summaries can be downloaded as text files. Differences are calculated using unrounded predictions.
-
-Results are model-based scenarios, not guaranteed effects of real-world interventions.
+Dependencies are recorded in `requirements.txt`. Dependency checks passed in the tested macOS environment. Installation on other operating systems has not been independently verified.
 
 ## Verification
 
 ### Model Checks
+
+Run:
 
 ```bash
 python evaluate.py
@@ -152,9 +260,9 @@ python evaluate.py
 
 This saves:
 
-- docs/model_metrics.json
-- docs/importance_churn_30d.csv
-- docs/importance_nonresponse.csv
+- `docs/model_metrics.json`
+- `docs/importance_churn_30d.csv`
+- `docs/importance_nonresponse.csv`
 
 It verifies:
 
@@ -162,9 +270,11 @@ It verifies:
 - Exact reconstruction of individual prediction log odds.
 - Consistent predictions for unchanged inputs.
 
-These checks passed in the Python 3.14.6 macOS environment.
+These checks passed in the tested macOS environment.
 
 ### Application Checks
+
+Run:
 
 ```bash
 python test_app.py
@@ -173,25 +283,27 @@ python test_app.py
 Automated application checks passed for:
 
 - All three pages loading without displayed errors.
-- Unchanged scenarios for both predictive models.
-- Modified scenarios for both predictive models.
+- Unchanged scenarios for both models.
+- Modified scenarios for both models.
 - Required automatic-summary content.
 - Individual contribution tables.
 - Invalid notice input rejection.
 - Removal of stale results after invalid input.
 - Recovery after correcting invalid inputs.
 
-The downloaded scenario summary was separately opened and checked for the required content. The updated contribution chart was visually checked against its table values.
+The downloaded scenario summary was separately opened and checked. The contribution chart was visually compared with its table values.
 
-The missing ScriptRunContext warning may appear during automated testing and does not indicate a failed check.
+A missing `ScriptRunContext` warning may appear during automated testing and does not indicate a failed check.
 
 ### Dependency Checks
+
+Run:
 
 ```bash
 python -m pip check
 ```
 
-The verified environment reported:
+The tested environment reported:
 
 ```text
 No broken requirements found.
@@ -201,29 +313,45 @@ No broken requirements found.
 
 | File or Folder | Purpose |
 |---|---|
-| main.py | Application entry point and navigation. |
-| Renewal_Overview.py | Historical renewal dashboard. |
-| modeling.py | Model training, evaluation, explanations, and summaries. |
-| pages/ | Subgroup analysis and predictive scenario pages. |
-| data/ | Synthetic raw and final CSV files. |
-| code/ | Data-generation and validation scripts. |
-| requirements.txt | Recorded dependency versions. |
-| evaluate.py | Model evaluation and consistency checks. |
-| test_app.py | Automated application checks. |
-| docs/PROGRESS_REPORT.md | KPI justification, predictor rationale, model results, accomplishments, and limitations. |
-| docs/CONTRIBUTIONS.md | Contributor responsibilities and AI-assistance disclosure. |
-| docs/DATA_SHARING.md | Data provenance, sharing scope, and interpretation limits. |
-| docs/model_metrics.json | Reproducible model evaluation results. |
-| docs/importance_churn_30d.csv | Overall churn-model predictor importance. |
-| docs/importance_nonresponse.csv | Overall nonresponse-model predictor importance. |
+| `main.py` | Application entry point and navigation. |
+| `Renewal_Overview.py` | Descriptive renewal dashboard. |
+| `modeling.py` | Model training, evaluation, explanations, and summaries. |
+| `pages/` | Subgroup analysis and predictive scenario pages. |
+| `data/raw/` | Synthetic source tables. |
+| `data/final/` | Final synthetic datasets used by the application. |
+| `code/` | Data-generation and validation scripts. |
+| `requirements.txt` | Recorded dependency versions. |
+| `evaluate.py` | Model evaluation and consistency checks. |
+| `test_app.py` | Automated application checks. |
+| `docs/PROGRESS_REPORT.md` | KPI justification, predictor rationale, model results, accomplishments, and limitations. |
+| `docs/CONTRIBUTIONS.md` | Actual member contributions and AI-assistance disclosure. |
+| `docs/DATA_SHARING.md` | Data provenance and sharing information. |
+| `docs/model_metrics.json` | Saved model evaluation results. |
+| `docs/importance_churn_30d.csv` | Churn-model permutation importance. |
+| `docs/importance_nonresponse.csv` | Nonresponse-model permutation importance. |
 
-Historical documentation may remain in the project. Use this README for current setup instructions.
+Run data-generation scripts only from the project directory. Regenerating data may overwrite included CSV files.
 
-Run generation scripts only from the project directory. Regenerating data may overwrite the supplied CSV files.
+## Progress and Contributions
+
+Completed work includes:
+
+- Descriptive renewal and subgroup pages.
+- Two predictive modeling pipelines.
+- Household-separated holdout evaluation.
+- Global predictor importance and individual prediction explanations.
+- Editable what-if scenarios with fixed baselines.
+- Automatically generated, downloadable summaries.
+- Model and application verification scripts.
+- Setup instructions and supporting documentation.
+
+See [the progress report](docs/PROGRESS_REPORT.md) for details.
+
+See [member contributions](docs/CONTRIBUTIONS.md) for each contributor’s actual completed work and the AI-assistance disclosure. Both contributors should verify that statement before submission.
 
 ## Demonstration Video
 
-The seven-minute demonstration recording will be added or linked before submission.
+The required seven-minute demonstration recording is pending and will be added or linked here before submission.
 
 The recording will demonstrate:
 
@@ -235,34 +363,46 @@ The recording will demonstrate:
 - Automatically generated summaries.
 - Interpretation and limitations.
 
-Replay the recording to confirm clear audio, readable visuals, and unobstructed application content.
+The live application supplements the recording; it does not replace it.
 
-If the recording is hosted separately, verify its viewing permissions independently.
+Replay the recording to confirm clear audio, readable visuals, and unobstructed application content. If hosted separately, verify that the instructor and all contributors can view it.
 
-## Data and Interpretation Limits
+## Data Provenance and Sharing
 
-All supplied beneficiary and household records are synthetic.
+All supplied beneficiary, household, renewal, outreach, administrative, and churn records are synthetic.
 
-- Predictions do not determine eligibility or justify denial of services.
+No actual Medicaid administrative records or real beneficiary identifiers were used. No restricted external dataset is required to run the application.
+
+Included generation scripts and raw/final CSV files support reproduction of the educational project.
+
+See [data provenance and sharing](docs/DATA_SHARING.md) for details. Contributors should confirm authorization to share project materials.
+
+Do not upload virtual environments, credentials, API keys, private documents, or real beneficiary data.
+
+## Interpretation and Limitations
+
+- Predictions support educational planning scenarios.
+- Models do not determine eligibility or justify denial of services.
 - Predictive importance and contributions do not establish causation.
 - Churn is simulated rather than an observed enrollment event.
-- Early nonresponse includes cases with no outreach attempts.
+- Early nonresponse includes episodes with no outreach attempts.
+- Contact attributes are assumed known at the earlier prediction time.
 - Some scenario combinations may be uncommon.
-- Financial savings are not estimated.
+- Financial savings and intervention effects are not estimated.
 - Excluding protected attributes does not establish model fairness.
-- Real-world use requires authorized data, timestamp verification, external validation, calibration assessment, and subgroup model evaluation.
-
-Review [the data-sharing documentation](docs/DATA_SHARING.md) and confirm authorization before publishing project materials.
+- Subgroup comparisons describe historical synthetic outcomes.
+- Real-world use requires authorized data, timestamp verification, external and temporal evaluation, calibration assessment, subgroup model evaluation, and human review.
 
 ## Submission Checklist
 
-- [ ] Updated application and authorized data included.
-- [ ] Setup instructions and dependencies reviewed.
-- [ ] Progress report finalized.
-- [ ] Each contributor's actual work confirmed and documented.
+- [x] Application code included.
+- [x] Synthetic data and generation scripts included.
+- [x] Setup instructions and dependencies documented.
+- [x] Progress report included.
+- [x] Model metrics and importance outputs included.
+- [ ] Each contributor’s actual work confirmed and documented.
+- [ ] Live application tested in a signed-out browser for all pages and both models.
 - [ ] Seven-minute demonstration video added or linked.
-- [ ] Video playback and audio checked.
-- [ ] Instructor and all collaborators have access.
-- [ ] Repository or folder link submitted through the course portal.
-
-Do not upload virtual environments, caches, or credentials.
+- [ ] Recording replayed to verify audio and visibility.
+- [ ] Instructor and all contributors can access the repository and recording.
+- [ ] Repository link submitted through the course portal.
