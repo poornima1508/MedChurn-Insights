@@ -12,9 +12,7 @@ Explore historical renewal outcomes, subgroup comparisons, and predictive what-i
 
 ## Demonstration Video
 
-[Watch the MedChurn demonstration](demo.mp4)
-
-
+[Watch the MedChurn demonstration](https://sluedu-my.sharepoint.com/personal/poornima_anamanenisayeeswaran_slu_edu/_layouts/15/stream.aspx?id=%2Fpersonal%2Fpoornima%5Fanamanenisayeeswaran%5Fslu%5Fedu%2FDocuments%2FRecordings%2FCall%20with%20Md%20Arshad%20Khan%2D20261026%5F223317%2DMeeting%20Recording%2Emp4)
 
 The demonstration covers the KPIs, predictive models, predictor importance, individual contributions, what-if analysis, automatically generated summaries, and interpretation limits.
 
