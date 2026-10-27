@@ -25,7 +25,7 @@ Financial relevance is indirect: workload planning may support efficient use of 
 
 ### Coverage Churn Model
 
-The model predicts churn 30 days before renewal using information available by that snapshot.
+The model predicts churn 30 days before renewal using information assumed available by that snapshot.
 
 | Predictor | Predictive Relevance |
 |---|---|
@@ -142,7 +142,9 @@ Log-odds contributions are not percentage-point changes. They explain a scenario
 
 Readable predictor labels, signed contributions, odds multipliers, and chart tooltips support interpretation. Positive and negative contributions use different colors.
 
-These results describe predictive associations. They do not establish causation or demonstrate the effect of an intervention. Correlated and derived predictors may complicate attribution.
+These explanations support review of how the model assesses a case. They do not identify the cause of an outcome or establish which intervention will work.
+
+Correlated and derived predictors may complicate attribution.
 
 ### What-if Analysis
 
@@ -192,6 +194,10 @@ Completed work includes:
 - Updated charts to display explicit values and readable labels.
 - Retained synthetic data, generation scripts, and previous validation outputs.
 - Recorded dependency versions and updated setup instructions.
+- Published project materials in the GitHub repository.
+- Deployed the application on Streamlit Community Cloud.
+- Recorded the application demonstration and added its SharePoint link to the README.
+- Added the member contribution statement.
 
 The application and automated checks were run on macOS using Python 3.14.6.
 
@@ -218,9 +224,11 @@ Automated application checks passed for:
 
 The downloaded scenario summary was opened and checked for the required content. The corrected contribution chart was visually checked against its table values.
 
-Dependency checks reported no broken requirements. Installation on other operating systems has not been verified.
+Dependency checks reported no broken requirements. Installation on other operating systems has not been independently verified.
 
 ### Verified Scenario Examples
+
+The following examples use selected inputs for held-out episode R0000014. Other inputs remain at their original baseline values.
 
 | Model | Input Change | Baseline Risk | Updated Risk | Difference |
 |---|---|---:|---:|---:|
@@ -250,19 +258,29 @@ The main limitations are:
 
 Operational use would require authorized real data, timestamp verification, temporal and external validation, calibration assessment, subgroup error analysis, staffing and cost inputs, and human review.
 
-## 6. Remaining Deliverables
+## 6. Submission Status
 
-Before submission:
+The application, synthetic datasets, setup instructions, dependencies, evaluation outputs, and member contribution statement are included in the GitHub repository.
 
-- Confirm that each contributor’s statement reflects completed work.
-- Record the seven-minute demonstration.
-- Replay the recording to verify audio, readability, and unobstructed screen content.
-- Upload the application, authorized data, documentation, and recording or video link.
-- Confirm instructor and collaborator access to all materials.
-- Submit the repository or folder link.
+Repository:
+
+https://github.com/poornima1508/MedChurn-Insights
+
+Live application:
+
+https://medchurn-insights.streamlit.app/
+
+The demonstration recording is hosted on university SharePoint through Microsoft Stream. Its viewing link is included in the README. The recording is not stored directly in the repository.
+
 
 ## 7. Contributor Statement
 
-Individual responsibilities are documented in docs/CONTRIBUTIONS.md and must accurately reflect work completed by each contributor.
+Individual responsibilities are documented in [CONTRIBUTIONS.md](CONTRIBUTIONS.md).
+
+Poornima Anamaneni Sayeeswaran integrated application workflows, ran evaluation and application checks, updated documentation, uploaded project materials, and deployed the live application.
+
+Md Arshad Khan reviewed KPI definitions, predictor justifications, modeling rationale, evaluation results, interpretation limitations, application workflows, and supporting documentation.
+
+The contribution statement should be verified by both members.
 
 ChatGPT assisted with implementation, troubleshooting, and documentation drafts. Contributors are responsible for reviewing the implementation, understanding the methods, verifying results, and disclosing assistance according to course requirements.
