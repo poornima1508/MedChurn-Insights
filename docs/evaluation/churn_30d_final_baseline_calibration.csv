@@ -1,0 +1,2 @@
+probability_band,cases,observed_rate,mean_prediction,prediction_minus_observed
+"(0.1, 0.2]",7432,0.13495694294940797,0.13248847926267282,-0.002468463686735145

@@ -1,0 +1,46 @@
+{
+  "dataset_sha256": "e207df4a9b03cc907cf0c9aa614fd0389d62099ab67ba4a4012140388e325486",
+  "selection_file_sha256": "4fb8f2a9b42885dfdfc6d7520ef570cfb107c0d095244662a270a7267fdb9339",
+  "selection_document_sha256": "134ee6bf1ce3db4198b008c197ccfd2a503d25c9addabf7ff3fca786d604b9fb",
+  "training_rows": 22568,
+  "test_rows": 7432,
+  "household_overlap": false,
+  "selection_source": "Validation log loss only",
+  "test_status": "Reused original test partition; results were previously inspected in the earlier submission.",
+  "further_tuning": "None permitted using these test results",
+  "retained_models": {
+    "Coverage churn": {
+      "target": "churn_30d",
+      "proposed_change": "Stronger regularization: C=1 to C=0.1",
+      "retained_version": "Revised",
+      "features": [
+        "prior_coverage_gaps",
+        "notice_sent",
+        "notice_returned",
+        "responded_pre_prediction",
+        "prior_documentation_issues",
+        "administrative_complexity"
+      ],
+      "C": 0.1,
+      "original_validation_log_loss": 0.37058307777216654,
+      "revised_validation_log_loss": 0.37055962052212277,
+      "revised_minus_original_log_loss": -2.3457250043767974e-05,
+      "reason": "Lower validation log loss.",
+      "practical_significance": "Numerical selection only. Review the size of the difference and supporting metrics before claiming a meaningful operational improvement."
+    },
+    "Early outreach nonresponse": {
+      "target": "nonresponse",
+      "proposed_change": "Remove Address Stability; retain Contact Stability",
+      "retained_version": "Revised",
+      "features": [
+        "contact_stability"
+      ],
+      "C": 1.0,
+      "original_validation_log_loss": 0.6573127556722457,
+      "revised_validation_log_loss": 0.6571970205164275,
+      "revised_minus_original_log_loss": -0.00011573515581819738,
+      "reason": "Lower validation log loss.",
+      "practical_significance": "Numerical selection only. Review the size of the difference and supporting metrics before claiming a meaningful operational improvement."
+    }
+  }
+}

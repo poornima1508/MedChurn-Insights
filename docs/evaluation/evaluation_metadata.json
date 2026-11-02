@@ -1,0 +1,14 @@
+{
+  "dataset_sha256": "e207df4a9b03cc907cf0c9aa614fd0389d62099ab67ba4a4012140388e325486",
+  "original_split_seed": 42,
+  "validation_split_seed": 43,
+  "partition_rows": {
+    "development_train": 18081,
+    "validation": 4487,
+    "original_test_reserved": 7432
+  },
+  "household_overlap": false,
+  "selection_metric": "validation log loss",
+  "test_evaluated_by_this_script": false,
+  "limitation": "Original test results were previously inspected. The reserved partition is not a new untouched test."
+}
