@@ -4,18 +4,19 @@
 
 | Member | Work Completed | Files / Evidence |
 |---|---|---|
-| Poornima Anamaneni Sayeeswaran | Set up the Week 11 environment; ran validation and final model comparisons; integrated revised decision-support workflows; ran application checks; facilitated the guided outside-participant test; updated individual explanations to display predictor values; prepared evaluation, user-testing, and setup documentation; committed changes locally. | evaluate_models.py, evaluate_final.py, decision_support.py, pages/3_Predictive_Scenarios.py, test_app.py, docs/evaluation/, docs/EVALUATION_REPORT.md, docs/USER_TESTING.md, README.md, and Git history. |
+| Poornima Anamaneni Sayeeswaran | Set up the Week 11 environment; ran validation and final model comparisons; integrated revised decision-support workflows; ran application checks; facilitated the guided outside-participant test; updated individual explanations to display predictor values; prepared evaluation, user-testing, and setup documentation; committed and pushed project updates to GitHub. | evaluate_models.py, evaluate_final.py, decision_support.py, pages/3_Predictive_Scenarios.py, test_app.py, docs/evaluation/, docs/EVALUATION_REPORT.md, docs/USER_TESTING.md, README.md, and Git history. |
+| Md Arshad Khan | Reviewed and confirmed model comparisons, selection rationale, leakage assumptions, error analysis, limitations, user-testing findings, and revised application explanations. | docs/EVALUATION_REPORT.md, docs/MODEL_SELECTION.md, docs/USER_TESTING.md, docs/evaluation/, and application review. |
 
 ## Week 11 — Remaining Responsibilities
 
 | Member | Assigned Responsibilities |
 |---|---|
-| Poornima Anamaneni Sayeeswaran | Finalize project documentation; push updates to GitHub; verify the live deployment and recording permissions. Present the application purpose, evaluation design, and coverage churn comparison. |
-| Md Arshad Khan | Review model comparisons and selection rationale, leakage assumptions, error analysis, limitations, user-testing findings, and revised explanations. Present nonresponse results, individual contributions, user-testing findings, and limitations. |
-| Both members | Record and review the seven-minute demonstration; confirm the accuracy of individual contributions; verify instructor and group-member access before submission. |
+| Poornima Anamaneni Sayeeswaran | Present the application purpose, evaluation design, and coverage churn comparison; add the new recording link; verify the updated live deployment and recording permissions. |
+| Md Arshad Khan | Present nonresponse results, individual prediction contributions, user-testing findings, and limitations. |
+| Both members | Record and review the seven-minute demonstration; confirm final documentation and contribution statements; verify instructor and group-member access before submission. |
 
-Assigned responsibilities will be moved to completed contributions
-after the work is performed and confirmed by the relevant member.
+Demonstration contributions will be recorded as completed after
+the new recording is finished.
 
 ## Week 10 — Previously Recorded Contributions
 
