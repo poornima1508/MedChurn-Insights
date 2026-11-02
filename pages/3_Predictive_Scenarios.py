@@ -8,7 +8,6 @@ import streamlit as st
 from decision_support import (
     FIXED_HISTORY,
     INPUT_ROLES,
-    calculate_complexity,
     explain,
     input_comparison,
     label,
@@ -28,28 +27,71 @@ def fitted_models():
     return train_selected()
 
 
+# --------------------------------------------------
+# INDIVIDUAL PREDICTION EXPLANATION
+# --------------------------------------------------
 def show_contributions(bundle, row):
-    """Explain one prediction relative to mean training features."""
+    """Explain one prediction and display its actual input values."""
     reference, contributions = explain(
-        bundle, row[bundle["features"]]
+        bundle,
+        row[bundle["features"]],
     )
+
+    case = row.iloc[0]
+
+    binary_fields = {
+        "notice_sent",
+        "notice_returned",
+        "responded_pre_prediction",
+        "prior_documentation_issues",
+        "income_verification_required",
+    }
+
+    def display_value(predictor):
+        value = case[predictor]
+
+        if pd.isna(value):
+            return "Missing"
+
+        if predictor in binary_fields:
+            return "Yes" if int(value) == 1 else "No"
+
+        if isinstance(
+            value,
+            (int, float, np.integer, np.floating),
+        ):
+            number = float(value)
+
+            if number.is_integer():
+                return str(int(number))
+
+            return f"{number:g}"
+
+        return str(value)
 
     table = contributions.copy()
     table["Predictor"] = table["predictor"].map(label)
+    table["Input Value"] = table["predictor"].map(display_value)
+
+    table["Predictor and Value"] = (
+        table["Predictor"] + ": " + table["Input Value"]
+    )
+
     table["Odds Multiplier"] = np.exp(
         table["log_odds_contribution"]
     )
 
     st.caption(
-        "This explains one prediction relative to mean training "
-        "features. It is different from overall predictor importance "
-        "and from the selected episode baseline."
+        "This explains the prediction for the input values shown below, "
+        "relative to mean training features. It differs from overall "
+        "predictor importance and from the selected episode baseline."
     )
 
     st.dataframe(
         table[
             [
                 "Predictor",
+                "Input Value",
                 "log_odds_contribution",
                 "Odds Multiplier",
             ]
@@ -72,10 +114,10 @@ def show_contributions(bundle, row):
                 scale=alt.Scale(zero=True),
             ),
             y=alt.Y(
-                "Predictor:N",
-                sort=table["Predictor"].tolist(),
+                "Predictor and Value:N",
+                sort=table["Predictor and Value"].tolist(),
                 title=None,
-                axis=alt.Axis(labelLimit=300),
+                axis=alt.Axis(labelLimit=400),
             ),
             color=alt.condition(
                 alt.datum.log_odds_contribution > 0,
@@ -83,14 +125,22 @@ def show_contributions(bundle, row):
                 alt.value("#178A91"),
             ),
             tooltip=[
-                "Predictor:N",
+                alt.Tooltip(
+                    "Predictor:N",
+                    title="Predictor",
+                ),
+                alt.Tooltip(
+                    "Input Value:N",
+                    title="Input Value",
+                ),
                 alt.Tooltip(
                     "log_odds_contribution:Q",
-                    title="Contribution",
+                    title="Contribution in Log Odds",
                     format=".4f",
                 ),
                 alt.Tooltip(
                     "Odds Multiplier:Q",
+                    title="Odds Multiplier",
                     format=".4f",
                 ),
             ],
@@ -101,27 +151,34 @@ def show_contributions(bundle, row):
     st.altair_chart(chart, width="stretch")
 
     for _, item in table.iterrows():
-        value = float(item["log_odds_contribution"])
+        contribution = float(
+            item["log_odds_contribution"]
+        )
 
-        if np.isclose(value, 0):
+        if np.isclose(contribution, 0):
             direction = "makes approximately no contribution"
-        elif value > 0:
+        elif contribution > 0:
             direction = "moves the model toward higher risk"
         else:
             direction = "moves the model toward lower risk"
 
         st.write(
-            f"**{item['Predictor']}:** {value:+.4f} log odds; "
-            f"{direction} relative to its training reference."
+            f"**{item['Predictor']} = {item['Input Value']}:** "
+            f"{contribution:+.4f} log odds; {direction} "
+            "relative to the training reference."
         )
 
     with st.expander("How the explanation adds up"):
-        total = float(contributions["log_odds_contribution"].sum())
+        total = float(
+            contributions["log_odds_contribution"].sum()
+        )
+
         st.write(
             f"Reference log odds: {reference:.4f}. "
             f"Total contribution: {total:+.4f}. "
             f"Prediction log odds: {reference + total:.4f}."
         )
+
         st.write(
             "The logistic transformation converts the final log odds "
             "into probability. These contributions are not "
@@ -129,14 +186,27 @@ def show_contributions(bundle, row):
             "the baseline-to-scenario difference."
         )
 
+        st.write(
+            "Each odds multiplier is the exponential of that input's "
+            "log-odds contribution. It is relative to the training "
+            "reference, not a multiplier of probability or an "
+            "estimated intervention effect."
+        )
+
     st.info(
         "Positive means higher model risk relative to the training "
-        "reference; negative means lower model risk. Contributions "
-        "describe model associations, not causes or intervention effects."
+        "reference; negative means lower model risk. Read each "
+        "contribution together with its displayed input value. "
+        "Contributions describe model associations, not causes "
+        "or intervention effects."
     )
 
 
+# --------------------------------------------------
+# HEADER AND MODEL LOADING
+# --------------------------------------------------
 st.title("Renewal Risk and Outreach Scenarios")
+
 st.warning(
     "Synthetic educational data. Use predictions for illustrative "
     "supportive planning, not eligibility or denial decisions."
@@ -145,33 +215,43 @@ st.warning(
 try:
     with st.spinner("Preparing the evaluated models..."):
         data, bundles = fitted_models()
+
 except (OSError, ValueError, KeyError) as error:
     st.error(f"Unable to prepare models: {error}")
     st.stop()
+
 
 name = st.selectbox(
     "Select a prediction model",
     list(bundles),
 )
+
 bundle = bundles[name]
 columns = scenario_columns(name)
 
+
+# --------------------------------------------------
+# KPI AND PREDICTION TIMELINE
+# --------------------------------------------------
 if name == "Coverage churn":
     st.markdown(
         "**KPI: Coverage churn rate** — the proportion of renewal "
         "episodes with a simulated coverage interruption within "
         "30 days after renewal."
     )
+
     st.caption(
         "Prediction time: 30 days before renewal. "
         "Intended use: coverage-continuity review and workload planning."
     )
+
 else:
     st.markdown(
         "**KPI: Early outreach nonresponse rate** — the proportion "
         "without a response by 30 days before renewal, including "
         "episodes with no outreach attempts."
     )
+
     st.caption(
         "Forecast origin: 45 days before renewal. "
         "Contact Stability is assumed available then. "
@@ -184,10 +264,14 @@ st.caption(
     "No financial savings or causal intervention effects are estimated."
 )
 
+
 # --------------------------------------------------
 # PERFORMANCE AND LIMITATIONS
 # --------------------------------------------------
-with st.expander("Model performance and limitations", expanded=True):
+with st.expander(
+    "Model performance and limitations",
+    expanded=True,
+):
     st.write(
         "We compared the original and revised models on separate "
         "validation households. We selected models using validation "
@@ -229,6 +313,7 @@ with st.expander("Model performance and limitations", expanded=True):
             bundle["selection"]["retained_version"]
         )
     ].iloc[0]
+
     constant = comparison[
         comparison["version"].eq("Constant baseline")
     ].iloc[0]
@@ -240,16 +325,16 @@ with st.expander("Model performance and limitations", expanded=True):
     )
 
     st.write(
-        f"Compared with giving everyone the same training-rate "
-        f"prediction, the selected model reduces test log loss by "
+        "Compared with giving everyone the same training-rate "
+        "prediction, the selected model reduces test log loss by "
         f"about **{improvement:.1f}%**. Lower log loss and Brier score "
         "mean less probability error."
     )
 
     st.write(
-        f"Under an illustrative capacity to review 20% of cases, "
+        "Under an illustrative capacity to review 20% of cases, "
         f"**{retained['precision_top20']:.1%}** of reviewed cases "
-        f"have the outcome, capturing "
+        "have the outcome, capturing "
         f"**{retained['recall_top20']:.1%}** of all outcomes."
     )
 
@@ -274,11 +359,13 @@ with st.expander("Model performance and limitations", expanded=True):
             "error only slightly and slightly reduces ranking metrics. "
             "It is not a major accuracy improvement."
         )
+
         st.write(
             "**Practical limitation:** a low churn probability does "
             "not rule out coverage interruption. Do not exclude a case "
             "from assistance solely because its predicted risk is low."
         )
+
     else:
         st.write(
             "**Selected model:** logistic regression using Contact "
@@ -286,6 +373,7 @@ with st.expander("Model performance and limitations", expanded=True):
             "explanations and slightly improves probability error, "
             "but test average precision and top-20% yield decrease."
         )
+
         st.write(
             "**Practical limitation:** cases in the same Contact "
             "Stability category receive the same probability. "
@@ -305,19 +393,26 @@ with st.expander("Model performance and limitations", expanded=True):
         version = bundle["selection"]["retained_version"].lower()
 
         calibration_path = (
-            EVALUATION / f"{slug}_final_{version}_calibration.csv"
+            EVALUATION
+            / f"{slug}_final_{version}_calibration.csv"
         )
+
         segment_path = (
-            EVALUATION / f"{slug}_final_{version}_segments.csv"
+            EVALUATION
+            / f"{slug}_final_{version}_segments.csv"
         )
 
         if calibration_path.is_file():
-            st.markdown("**Predicted versus observed probabilities**")
+            st.markdown(
+                "**Predicted versus observed probabilities**"
+            )
+
             st.dataframe(
                 pd.read_csv(calibration_path),
                 hide_index=True,
                 width="stretch",
             )
+
             st.caption(
                 "Compare mean predictions with observed outcome rates "
                 "within each probability interval. Differences are "
@@ -326,11 +421,13 @@ with st.expander("Model performance and limitations", expanded=True):
 
         if segment_path.is_file():
             st.markdown("**Errors across case segments**")
+
             st.dataframe(
                 pd.read_csv(segment_path),
                 hide_index=True,
                 width="stretch",
             )
+
             st.caption(
                 "Higher segment Brier scores can reflect different "
                 "outcome rates as well as prediction error. "
@@ -340,12 +437,16 @@ with st.expander("Model performance and limitations", expanded=True):
                 "here are not forecasting inputs."
             )
 
+
 # --------------------------------------------------
-# OVERALL IMPORTANCE
+# OVERALL PREDICTOR IMPORTANCE
 # --------------------------------------------------
 with st.expander("Overall Predictor Importance"):
     importance = bundle["importance"].copy()
-    importance["Predictor"] = importance["predictor"].map(label)
+
+    importance["Predictor"] = (
+        importance["predictor"].map(label)
+    )
 
     st.caption(
         "Predictive usefulness across the reused test cases: mean "
@@ -356,7 +457,11 @@ with st.expander("Overall Predictor Importance"):
 
     st.dataframe(
         importance[
-            ["Predictor", "importance", "sd"]
+            [
+                "Predictor",
+                "importance",
+                "sd",
+            ]
         ].rename(
             columns={
                 "importance": "Mean Increase in Log Loss",
@@ -367,7 +472,7 @@ with st.expander("Overall Predictor Importance"):
         width="stretch",
     )
 
-    chart = (
+    importance_chart = (
         alt.Chart(importance)
         .mark_bar(color="#178A91")
         .encode(
@@ -382,23 +487,41 @@ with st.expander("Overall Predictor Importance"):
                 axis=alt.Axis(labelLimit=300),
             ),
             tooltip=[
-                "Predictor:N",
-                alt.Tooltip("importance:Q", format=".6f"),
-                alt.Tooltip("sd:Q", format=".6f"),
+                alt.Tooltip(
+                    "Predictor:N",
+                    title="Predictor",
+                ),
+                alt.Tooltip(
+                    "importance:Q",
+                    title="Mean Increase in Log Loss",
+                    format=".6f",
+                ),
+                alt.Tooltip(
+                    "sd:Q",
+                    title="Standard Deviation",
+                    format=".6f",
+                ),
             ],
         )
-        .properties(height=max(130, 38 * len(importance)))
+        .properties(
+            height=max(130, 38 * len(importance))
+        )
     )
 
-    st.altair_chart(chart, width="stretch")
+    st.altair_chart(
+        importance_chart,
+        width="stretch",
+    )
+
     st.info(
         "Overall importance describes many cases. Individual "
         "contributions explain one prediction. Neither establishes "
         "causation, and correlated inputs may share importance."
     )
 
+
 # --------------------------------------------------
-# BASELINE
+# BASELINE CASE
 # --------------------------------------------------
 st.divider()
 st.subheader("Baseline Case")
@@ -406,18 +529,24 @@ st.subheader("Baseline Case")
 idx = st.selectbox(
     "Select a held-out renewal episode",
     bundle["test"][:100].tolist(),
-    format_func=lambda value: str(data.loc[value, "episode_id"]),
+    format_func=lambda value: str(
+        data.loc[value, "episode_id"]
+    ),
     key=f"baseline_{name}",
 )
 
 baseline = data.loc[[idx], columns].copy()
+
 baseline_risk = float(
     bundle["pipe"].predict_proba(
         baseline[bundle["features"]]
     )[0, 1]
 )
 
-st.metric("Baseline Predicted Risk", f"{baseline_risk:.2%}")
+st.metric(
+    "Baseline Predicted Risk",
+    f"{baseline_risk:.2%}",
+)
 
 st.dataframe(
     baseline.rename(columns=label),
@@ -434,20 +563,26 @@ st.caption(
 with st.expander("Explain the Baseline Prediction"):
     show_contributions(bundle, baseline)
 
+
 # --------------------------------------------------
 # INPUT ROLES
 # --------------------------------------------------
-with st.expander("Which inputs can reasonably change?", expanded=True):
+with st.expander(
+    "Which inputs can reasonably change?",
+    expanded=True,
+):
+    roles = pd.DataFrame(
+        [
+            {
+                "Input": label(column),
+                "Role": INPUT_ROLES[column],
+            }
+            for column in columns
+        ]
+    )
+
     st.dataframe(
-        pd.DataFrame(
-            [
-                {
-                    "Input": label(column),
-                    "Role": INPUT_ROLES[column],
-                }
-                for column in columns
-            ]
-        ),
+        roles,
         hide_index=True,
         width="stretch",
     )
@@ -459,12 +594,14 @@ with st.expander("Which inputs can reasonably change?", expanded=True):
             "outreach activity describe operational conditions, but "
             "their observed history cannot be changed retroactively."
         )
+
         st.write(
             "Beneficiary responses, returned mail, and verification "
             "requirements are not freely controlled actions. Edits "
             "represent alternative case assumptions at the same "
             "prediction snapshot, not a forecast of an intervention."
         )
+
     else:
         st.write(
             "Contact Stability describes a household condition. "
@@ -473,8 +610,9 @@ with st.expander("Which inputs can reasonably change?", expanded=True):
             "Address Stability was removed from the selected model."
         )
 
+
 # --------------------------------------------------
-# SCENARIO FORM
+# WHAT-IF SCENARIO FORM
 # --------------------------------------------------
 st.subheader("What-if Scenario")
 
@@ -511,8 +649,12 @@ with st.form(f"scenario_{name}_{idx}"):
                 help=INPUT_ROLES[column],
                 key=f"input_{name}_{idx}_{column}",
             )
+
         else:
-            options = sorted(data[column].dropna().unique().tolist())
+            options = sorted(
+                data[column].dropna().unique().tolist()
+            )
+
             submitted[column] = st.selectbox(
                 label(column),
                 options,
@@ -522,8 +664,6 @@ with st.form(f"scenario_{name}_{idx}"):
             )
 
     if name == "Coverage churn":
-        preview = baseline.iloc[0].to_dict()
-        preview.update(submitted)
         st.caption(
             "Administrative Complexity is calculated automatically "
             "from prior gaps, documentation issues, and the income "
@@ -531,42 +671,62 @@ with st.form(f"scenario_{name}_{idx}"):
             "display its recalculated value."
         )
 
-    run = st.form_submit_button("Run What-if Analysis")
+    run = st.form_submit_button(
+        "Run What-if Analysis"
+    )
 
+
+# --------------------------------------------------
+# SCENARIO VALIDATION AND SAVED RESULTS
+# --------------------------------------------------
 result_key = f"validated_result_{name}_{idx}"
 
 if run:
     scenario, errors, warnings = prepare_scenario(
-        name, baseline, submitted, data
+        name,
+        baseline,
+        submitted,
+        data,
     )
 
     if errors:
         st.session_state.pop(result_key, None)
+
         for message in errors:
             st.error(message)
+
         st.info(
             "No scenario prediction was produced. Correct the inputs "
             "and submit again. Previous results for this case were cleared."
         )
+
     else:
         st.session_state[result_key] = {
             "values": scenario.iloc[0].to_dict(),
             "warnings": warnings,
         }
 
+
 # --------------------------------------------------
-# SIDE-BY-SIDE RESULTS
+# SIDE-BY-SIDE SCENARIO RESULTS
 # --------------------------------------------------
 if result_key in st.session_state:
     saved = st.session_state[result_key]
-    scenario = pd.DataFrame([saved["values"]], columns=columns)
+
+    scenario = pd.DataFrame(
+        [saved["values"]],
+        columns=columns,
+    )
 
     updated_risk = float(
         bundle["pipe"].predict_proba(
             scenario[bundle["features"]]
         )[0, 1]
     )
-    difference = (updated_risk - baseline_risk) * 100
+
+    difference = (
+        updated_risk - baseline_risk
+    ) * 100
 
     st.divider()
     st.subheader("Scenario Results")
@@ -574,9 +734,17 @@ if result_key in st.session_state:
     left, middle, right = st.columns(3)
 
     with left:
-        st.metric("Baseline Risk", f"{baseline_risk:.2%}")
+        st.metric(
+            "Baseline Risk",
+            f"{baseline_risk:.2%}",
+        )
+
     with middle:
-        st.metric("Updated Risk", f"{updated_risk:.2%}")
+        st.metric(
+            "Updated Risk",
+            f"{updated_risk:.2%}",
+        )
+
     with right:
         st.metric(
             "Change From Baseline",
@@ -586,7 +754,10 @@ if result_key in st.session_state:
     st.subheader("Baseline and Scenario Inputs")
 
     st.dataframe(
-        input_comparison(baseline, scenario),
+        input_comparison(
+            baseline,
+            scenario,
+        ),
         hide_index=True,
         width="stretch",
     )
@@ -601,7 +772,9 @@ if result_key in st.session_state:
     for message in saved["warnings"]:
         st.warning(message)
 
-    st.subheader("Automatically Generated Scenario Summary")
+    st.subheader(
+        "Automatically Generated Scenario Summary"
+    )
 
     summary = summarize_comparison(
         name,
@@ -611,6 +784,7 @@ if result_key in st.session_state:
         updated_risk,
         saved["warnings"],
     )
+
     st.write(summary)
 
     st.download_button(
@@ -621,8 +795,14 @@ if result_key in st.session_state:
         key=f"download_{name}_{idx}",
     )
 
-    st.subheader("Contributions to This Prediction")
-    show_contributions(bundle, scenario)
+    st.subheader(
+        "Contributions to This Prediction"
+    )
+
+    show_contributions(
+        bundle,
+        scenario,
+    )
 
     st.warning(
         "A lower scenario prediction is not proof that an action "
