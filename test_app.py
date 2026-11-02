@@ -1,124 +1,180 @@
 from pathlib import Path
 
+import numpy as np
 from streamlit.testing.v1 import AppTest
+
+from decision_support import (
+    calculate_complexity,
+    explain,
+    prepare_scenario,
+    scenario_columns,
+    train_selected,
+)
 
 
 ROOT = Path(__file__).resolve().parent
 TIMEOUT = 180
 
 
-def check_no_exceptions(app):
-    messages = "\n".join(
-        str(exception.message)
-        for exception in app.exception
-    )
-    assert not app.exception, messages
-
-
-def check_no_errors(app, context="Application"):
-    messages = "\n".join(
-        str(error.value)
-        for error in app.error
-    )
-    assert not app.error, f"{context} failed:\n{messages}"
-
-
-def find_element(elements, label):
-    matches = [
-        element
-        for element in elements
-        if element.label == label
-    ]
-
+def find(elements, label):
+    matches = [item for item in elements if item.label == label]
     assert len(matches) == 1, (
-        f"Expected one element labeled {label!r}; "
-        f"found {len(matches)}."
+        f"Expected one element labeled {label!r}; found {len(matches)}."
     )
-
     return matches[0]
 
 
-def metric_value(app, label):
-    return find_element(app.metric, label).value
+def check_clean(app):
+    assert not app.exception, str(app.exception)
+    assert not app.error, "\n".join(item.value for item in app.error)
 
 
-def run_scenario(app):
-    find_element(
-        app.button,
-        "Run What-if Analysis",
-    ).click()
+def metric(app, label):
+    return find(app.metric, label).value
 
+
+def submit(app):
+    find(app.button, "Run What-if Analysis").click()
     app.run(timeout=TIMEOUT)
-    check_no_exceptions(app)
+    assert not app.exception, str(app.exception)
 
 
 def check_results(app):
-    check_no_errors(app, "Scenario")
+    check_clean(app)
 
-    for label in [
-        "Baseline Risk",
-        "Updated Risk",
-        "Change From Baseline",
-    ]:
-        metric_value(app, label)
+    for name in ["Baseline Risk", "Updated Risk", "Change From Baseline"]:
+        metric(app, name)
 
-    headings = {
-        heading.value
-        for heading in app.subheader
-    }
+    tables = [item.value for item in app.dataframe]
 
-    assert "Scenario Results" in headings
-    assert "Automatically Generated Scenario Summary" in headings
-    assert "Contributions to This Prediction" in headings
+    assert any(
+        {"Baseline", "Scenario", "Changed", "Input role"}.issubset(
+            table.columns
+        )
+        for table in tables
+    ), "Side-by-side input comparison is missing."
 
-    summary_text = "\n".join(
-        block.value
-        for block in app.markdown
-    )
+    assert any(
+        "Contribution in Log Odds" in table.columns
+        for table in tables
+    ), "Individual explanation table is missing."
 
-    for required in [
+    text = "\n".join(item.value for item in app.markdown)
+
+    for phrase in [
         "Scenario inputs:",
+        "Changed inputs:",
         "Baseline predicted risk:",
         "Updated predicted risk:",
         "Change from baseline:",
         "Practical implications:",
+        "Trade-offs:",
         "Limitations:",
     ]:
-        assert required in summary_text, (
-            f"Missing summary content: {required}"
-        )
+        assert phrase in text, f"Missing summary content: {phrase}"
 
-    assert any(
-        "log_odds_contribution" in table.value.columns
-        or "Contribution in Log Odds" in table.value.columns
-        for table in app.dataframe
-    ), "Individual contribution table is missing."
+
+def check_rejected(app, message):
+    assert any(message in item.value for item in app.error)
+    assert not any(
+        item.label == "Updated Risk" for item in app.metric
+    ), "Previous scenario prediction remains after invalid input."
+
+
+# --------------------------------------------------
+# MODEL AND SCENARIO CHECKS
+# --------------------------------------------------
+data, bundles = train_selected()
+
+for name, bundle in bundles.items():
+    index = bundle["test"][0]
+    baseline = data.loc[[index], scenario_columns(name)].copy()
+
+    scenario, errors, _ = prepare_scenario(
+        name, baseline, {}, data
+    )
+    assert not errors, errors
+
+    features = bundle["features"]
+    p0 = bundle["pipe"].predict_proba(baseline[features])[0, 1]
+    p1 = bundle["pipe"].predict_proba(scenario[features])[0, 1]
+
+    assert np.isclose(p0, p1), "Unchanged inputs changed risk."
+
+    reference, contributions = explain(bundle, scenario[features])
+    reconstructed = reference + contributions[
+        "log_odds_contribution"
+    ].sum()
+    actual = bundle["pipe"].decision_function(scenario[features])[0]
+
+    assert np.isclose(reconstructed, actual)
+    print(f"PASS: prediction consistency and explanation — {name}")
+
+churn_base = data.loc[
+    [bundles["Coverage churn"]["test"][0]],
+    scenario_columns("Coverage churn"),
+].copy()
+
+changed_gap = int(churn_base.iloc[0]["prior_coverage_gaps"]) + 1
+_, errors, _ = prepare_scenario(
+    "Coverage churn",
+    churn_base,
+    {"prior_coverage_gaps": changed_gap},
+    data,
+)
+assert errors, "Fixed history change was accepted."
+print("PASS: fixed history is protected")
+
+scenario, errors, _ = prepare_scenario(
+    "Coverage churn",
+    churn_base,
+    {
+        "income_verification_required": (
+            1 - int(churn_base.iloc[0]["income_verification_required"])
+        )
+    },
+    data,
+)
+assert not errors, errors
+assert scenario.iloc[0]["administrative_complexity"] == (
+    calculate_complexity(scenario.iloc[0])
+)
+print("PASS: complexity is recalculated")
+
+_, errors, _ = prepare_scenario(
+    "Coverage churn",
+    churn_base,
+    {"outreach_attempts_pre_prediction": 999},
+    data,
+)
+assert errors, "Out-of-range input was accepted."
+print("PASS: numeric range validation")
+
+_, errors, _ = prepare_scenario(
+    "Early outreach nonresponse",
+    data.loc[
+        [bundles["Early outreach nonresponse"]["test"][0]],
+        scenario_columns("Early outreach nonresponse"),
+    ],
+    {"contact_stability": "Invalid category"},
+    data,
+)
+assert errors, "Unknown category was accepted."
+print("PASS: categorical validation")
 
 
 # --------------------------------------------------
 # PAGE LOADING
 # --------------------------------------------------
-pages = [
+for page in [
     "Renewal_Overview.py",
     "pages/2_Outreach_and_Case_Review.py",
     "pages/3_Predictive_Scenarios.py",
-]
-
-for page in pages:
-    page_path = ROOT / page
-
-    assert page_path.exists(), (
-        f"Application file not found: {page_path}"
-    )
-
+]:
     app = AppTest.from_file(
-        str(page_path),
-        default_timeout=TIMEOUT,
+        str(ROOT / page), default_timeout=TIMEOUT
     ).run()
-
-    check_no_exceptions(app)
-    check_no_errors(app, f"Page {page}")
-
+    check_clean(app)
     print(f"PASS: page loads — {page}")
 
 
@@ -129,137 +185,101 @@ app = AppTest.from_file(
     str(ROOT / "pages/3_Predictive_Scenarios.py"),
     default_timeout=TIMEOUT,
 ).run()
+check_clean(app)
 
-check_no_exceptions(app)
-check_no_errors(app, "Predictive page")
-
-for name in [
-    "Coverage churn",
-    "Early outreach nonresponse",
-]:
-    find_element(
-        app.selectbox,
-        "Select a prediction model",
-    ).select(name)
-
+for name in ["Coverage churn", "Early outreach nonresponse"]:
+    find(app.selectbox, "Select a prediction model").select(name)
     app.run(timeout=TIMEOUT)
+    check_clean(app)
 
-    check_no_exceptions(app)
-    check_no_errors(app, name)
-
-    # Test original baseline inputs.
-    run_scenario(app)
+    submit(app)
     check_results(app)
 
-    baseline = metric_value(app, "Baseline Risk")
-    updated = metric_value(app, "Updated Risk")
-    difference = metric_value(app, "Change From Baseline")
-
-    assert baseline == updated, (
-        f"{name}: unchanged inputs changed the prediction."
-    )
-
-    assert difference in {
+    baseline_risk = metric(app, "Baseline Risk")
+    assert baseline_risk == metric(app, "Updated Risk")
+    assert metric(app, "Change From Baseline") in {
         "+0.00 percentage points",
-        "0.00 percentage points",
         "-0.00 percentage points",
-    }, (
-        f"{name}: expected zero change, received {difference}."
-    )
-
+        "0.00 percentage points",
+    }
     print(f"PASS: unchanged scenario — {name}")
 
-    # Modify one predictor.
     if name == "Coverage churn":
-        response = find_element(
-            app.number_input,
-            "Responded Before Prediction",
+        assert find(app.text_input, "Prior Coverage Gaps").disabled
+        assert find(app.text_input, "Prior Documentation Issues").disabled
+
+        find(
+            app.number_input, "Outreach Attempts Before Prediction"
+        ).set_value(1)
+
+        response = find(
+            app.number_input, "Responded Before Prediction"
         )
         response.set_value(1 - int(response.value))
-
     else:
-        stability = find_element(
-            app.selectbox,
-            "Contact Stability",
-        )
-
+        stability = find(app.selectbox, "Contact Stability")
         alternative = next(
             option
             for option in stability.options
             if option != stability.value
         )
-
         stability.select(alternative)
 
-    run_scenario(app)
+    submit(app)
     check_results(app)
 
-    assert metric_value(app, "Baseline Risk") == baseline, (
-        f"{name}: the selected baseline changed."
-    )
+    assert metric(app, "Baseline Risk") == baseline_risk
 
-    summary_text = "\n".join(
-        block.value
-        for block in app.markdown
-    )
+    comparisons = [
+        item.value
+        for item in app.dataframe
+        if "Changed" in item.value.columns
+    ]
+    assert comparisons[0]["Changed"].eq("Yes").any()
 
-    assert "Changed inputs: none" not in summary_text, (
-        f"{name}: summary did not identify changed inputs."
-    )
-
-    # Modified inputs are allowed to produce the same prediction.
-    print(f"PASS: modified scenario — {name}")
+    # Modified inputs are allowed to leave predictions unchanged.
+    print(f"PASS: modified scenario and fixed baseline — {name}")
 
 
 # --------------------------------------------------
-# INVALID NOTICE INPUTS
+# INVALID INPUTS, STALE RESULTS, AND RECOVERY
 # --------------------------------------------------
-find_element(
-    app.selectbox,
-    "Select a prediction model",
-).select("Coverage churn")
-
+find(app.selectbox, "Select a prediction model").select(
+    "Coverage churn"
+)
 app.run(timeout=TIMEOUT)
+check_clean(app)
 
-check_no_exceptions(app)
-check_no_errors(app, "Coverage churn page")
+find(app.number_input, "Renewal Notice Sent").set_value(0)
+find(app.number_input, "Renewal Notice Returned").set_value(1)
+submit(app)
+check_rejected(app, "A returned notice requires a sent notice.")
+print("PASS: invalid notice rejected and old results cleared")
 
-find_element(
-    app.number_input,
-    "Renewal Notice Sent",
-).set_value(0)
-
-find_element(
-    app.number_input,
-    "Renewal Notice Returned",
+find(app.number_input, "Renewal Notice Sent").set_value(1)
+find(
+    app.number_input, "Outreach Attempts Before Prediction"
 ).set_value(1)
-
-run_scenario(app)
-
-assert any(
-    "A returned notice requires a sent notice"
-    in error.value
-    for error in app.error
-), "Invalid notice combination was not rejected."
-
-assert not any(
-    metric.label == "Updated Risk"
-    for metric in app.metric
-), "Stale scenario results remain after invalid input."
-
-print("PASS: invalid notice combination rejected")
-
-
-# --------------------------------------------------
-# RECOVERY AFTER CORRECTION
-# --------------------------------------------------
-find_element(
-    app.number_input,
-    "Renewal Notice Sent",
-).set_value(1)
-
-run_scenario(app)
+submit(app)
 check_results(app)
+print("PASS: recovery after correcting notice inputs")
 
-print("PASS: valid scenario works after correcting inputs")
-print("All application checks passed.")
+find(
+    app.number_input, "Outreach Attempts Before Prediction"
+).set_value(0)
+find(app.number_input, "Responded Before Prediction").set_value(1)
+submit(app)
+check_rejected(
+    app,
+    "A recorded response requires at least one outreach attempt.",
+)
+print("PASS: response without outreach rejected")
+
+find(
+    app.number_input, "Outreach Attempts Before Prediction"
+).set_value(1)
+submit(app)
+check_results(app)
+print("PASS: recovery after correcting outreach inputs")
+
+print("\nAll updated application checks passed.")
