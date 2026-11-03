@@ -4,19 +4,22 @@
 
 | Member | Work Completed | Files / Evidence |
 |---|---|---|
-| Poornima Anamaneni Sayeeswaran | Set up the Week 11 environment; ran validation and final model comparisons; integrated revised decision-support workflows; ran application checks; facilitated the guided outside-participant test; updated individual explanations to display predictor values; prepared evaluation, user-testing, and setup documentation; committed and pushed project updates to GitHub. | evaluate_models.py, evaluate_final.py, decision_support.py, pages/3_Predictive_Scenarios.py, test_app.py, docs/evaluation/, docs/EVALUATION_REPORT.md, docs/USER_TESTING.md, README.md, and Git history. |
+| Poornima Anamaneni Sayeeswaran | Set up the Week 11 environment; ran validation and final model comparisons; integrated revised decision-support workflows; ran application checks; facilitated the guided outside-participant test; added predictor values to individual explanations; prepared evaluation, user-testing, and setup documentation; pushed updates to GitHub; verified both live scenario workflows; uploaded and linked the demonstration recording. | evaluate_models.py, evaluate_final.py, decision_support.py, pages/3_Predictive_Scenarios.py, test_app.py, docs/evaluation/, docs/EVALUATION_REPORT.md, docs/USER_TESTING.md, README.md, week11_demo.mp4, and Git history. |
 | Md Arshad Khan | Reviewed and confirmed model comparisons, selection rationale, leakage assumptions, error analysis, limitations, user-testing findings, and revised application explanations. | docs/EVALUATION_REPORT.md, docs/MODEL_SELECTION.md, docs/USER_TESTING.md, docs/evaluation/, and application review. |
 
-## Week 11 — Remaining Responsibilities
+## Week 11 Demonstration
 
-| Member | Assigned Responsibilities |
-|---|---|
-| Poornima Anamaneni Sayeeswaran | Present the application purpose, evaluation design, and coverage churn comparison; add the new recording link; verify the updated live deployment and recording permissions. |
-| Md Arshad Khan | Present nonresponse results, individual prediction contributions, user-testing findings, and limitations. |
-| Both members | Record and review the seven-minute demonstration; confirm final documentation and contribution statements; verify instructor and group-member access before submission. |
+Poornima presented the application purpose, retained KPIs,
+evaluation design, and coverage churn comparison.
 
-Demonstration contributions will be recorded as completed after
-the new recording is finished.
+Md Arshad Khan presented nonresponse evaluation and scenarios,
+individual contributions, input validation, user-testing findings,
+and limitations.
+
+Recording: [Week 11 demonstration](../week11_demo.mp4).
+
+Final playback, audio, readability, duration, and instructor/member
+access checks should be completed before submission.
 
 ## Week 10 — Previously Recorded Contributions
 
@@ -39,7 +42,7 @@ The Week 10 submission is preserved under the week10-submission tag.
 
 ChatGPT assisted with code implementation, troubleshooting,
 evaluation and testing suggestions, interpretation support,
-and documentation drafts.
+documentation drafts, and demonstration-script preparation.
 
 AI-generated practice responses were supplied during user-testing
 preparation. The user-testing documentation distinguishes practice
